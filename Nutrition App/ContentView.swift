@@ -17,7 +17,7 @@ struct NutritionPredict: View {
     let maxAge = 100
     @State var genderChoice = "male"
 
-    let genders = [
+    let genders = [ //lowercase vs uppercase gives a dinstinction between user input and values for AI
         "male":"Male",
         "female":"Female",
         "nonbinary":"Nonbinary",
@@ -40,7 +40,7 @@ struct NutritionPredict: View {
 
     var body: some View {
         NavigationView {
-            Form {
+            Form { //2 sections - 1 for input, other for output
                 Section(header: Text("Inputs")) {
 
                     VStack {
@@ -49,11 +49,10 @@ struct NutritionPredict: View {
                             Image(systemName: "minus")
                             Slider(value: $age.onChangeOf(updateFoodConsumed), in: 10...100)
                             Image(systemName: "plus")
-                        }.foregroundColor(Color.green)
-                        
+                        }.foregroundColor(Color.green) //everything in Hstack is green
                     }
                     Picker("Gender", selection: $genderChoice.onChangeOf(updateFoodConsumed)) {
-                        ForEach(genders.sorted(by:>), id: \.key) {
+                        ForEach(genders.sorted(by:<), id: \.key) { //user picks Female, genderchoice set to female
                             Text($1)
                         }
                     }
@@ -67,28 +66,26 @@ struct NutritionPredict: View {
                               onCommit: {updateFoodConsumed()})
 
                     Stepper(value: $activityLevel.onChangeOf(updateFoodConsumed), in: 0...2) {
-                        Text("Activity Level: \(self.activityLevels[activityLevel])")
+                        Text("Activity Level: \(activityLevels[activityLevel])")
                     }
                 }.accentColor(Color.green)
 
                 Section {
                     HStack {
                         Text("Prediction:").font(.largeTitle)
-                        Spacer()
+                        Spacer() //occupies all space it can
                         Text(prediction)
                     }
                 }
-            }.navigationBarTitle(Text("Nutrition level"),displayMode: .inline)
-        }.onAppear(perform: updateFoodConsumed)
+            }.navigationBarTitle(Text("Nutrition level"),displayMode: .inline) //yellow bar
+        }.onAppear(perform: updateFoodConsumed) //prediction will be "i don't know"
     }
     
     func updateFoodConsumed() {
-        print("Just got the call to updateFoodConsumed()")
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        print("Just got the call to updateFoodConsumed()") //prints in debug window (console)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) //resignFirstResponder removes the keyboard --> can see the whole app again
         debugPrint("Calling the Nutrition service")
         accumulateNutritionInfo()
-        //predictAI()
-        
     }
     
     func accumulateNutritionInfo() {
@@ -100,27 +97,10 @@ struct NutritionPredict: View {
         totalFat=0
         totalCarbs=0
         
-        addOneMeal(breakfast)
+        addOneMeal(breakfast) //calling addOneMeal for each meal
         addOneMeal(lunch)
         addOneMeal(dinner)
         addOneMeal(snacks)
-
-        
-        let foods=getMeals(breakfast)+getMeals(lunch)+getMeals(dinner)+getMeals(snacks)
-        print("Foods I saw:",foods)
-        for f in foods {
-            if(f.count<2) {
-                continue
-            }
-            
-        }
-        debugPrint("Finished the accumulateNutritionInfo service")
-        
-        
-    }
-    
-    func getMeals(_ s:String) -> [String] {
-        return s.split(separator: ",",omittingEmptySubsequences: false).map(String.init)
     }
     
     func addOneMeal(_ st:String) {
@@ -137,12 +117,12 @@ struct NutritionPredict: View {
                 "X-RapidAPI-Key": "ed2e57f8cemsh3b6b32df5faee12p135030jsnd59648c04075"
             ]
         AF.request(nutritionURL, method: .get, headers:headers).responseJSON { response in
-
+            // calls API for input
             //debugPrint("AF.Response:",response)
             switch response.result {
             case .success(let value):
                 let json = JSON(value)
-                debugPrint("Initial value is ",value," with json ",json)
+                //debugPrint("Initial value is ",value," with json ",json)
                 let cal=JSON(json["calories"])["value"].stringValue
                 let car=JSON(json["carbs"])["value"].stringValue
                 let pro=JSON(json["protein"])["value"].stringValue
@@ -152,7 +132,8 @@ struct NutritionPredict: View {
                 totalCarbs += Int(car) ?? 0
                 totalProteins += Int(pro) ?? 0
                 totalFat += Int(fat) ?? 0
-                predictAI()
+                debugPrint("TOTALCal, carbs, protein, fat is \(totalCalories),\(totalCarbs),\(totalProteins),\(totalFat)")
+                predictAI() //all values added, predict AI called
             default:
                 print("In default")
             }
@@ -172,16 +153,6 @@ struct NutritionPredict: View {
     func predictAI() {
         print("Just got the call to PredictAI()")
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-
-        /*
-        def get_prediction(data={"Calories":2026,"Fat":62.730000000000004,"Protein":67.375,"Carbs":312.855,"Activity":"sedentary"}):
-         */
-        //params["Age"] = String(age)
-        //params["Gender"] = String(genderChoice)
-        //params["Breakfast"] = String(breakfast)
-        //params["Lunch"] = String(lunch)
-        //params["Dinner"] = String(dinner)
-        //params["Snack"] = String(snacks)
         params["Activity"] = String(activityLevel)
         params["Calories"]=String(totalCalories)
         params["Carbs"]=String(totalCarbs)
@@ -191,7 +162,7 @@ struct NutritionPredict: View {
         debugPrint("Calling the AI service with parameters=",params)
         let uploadURL = "https://askai.aiclub.world/109d9241-c273-44d3-a8a1-52b575060647"
         self.prediction="Calling AI"
-        
+             //right click, see where the code comes from
         AF.request(uploadURL, method: .post, parameters: params, encoding: JSONEncoding.default).responseJSON { response in
             //debugPrint("AF.Response:",response)
             switch response.result {
@@ -212,17 +183,11 @@ struct NutritionPredict: View {
             }
         }
         
-        
     }
 
     init() {
         // UI look-and-feel
         UINavigationBar.appearance().backgroundColor = .yellow
-        /*
-         UINavigationBar.appearance().titleTextAttributes = [
-         .foregroundColor: UIColor.darkGray,
-         .font : UIFont(name:"HelveticaNeue", size: 30)!]
-         */
     }
 }
 
